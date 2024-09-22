@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/gofiber/fiber/v3"
+	"github.com/miladshalikar/golang-clean-web-api/src/api/validations"
 	"net/http"
 )
 
@@ -11,8 +12,9 @@ type header struct {
 }
 
 type personData struct {
-	FirstName string
-	LastName  string
+	FirstName    string `json:"first_name" validate:"required,alpha,min=4,max=10"`
+	LastName     string `json:"last_name" validate:"required,alpha,min=6,max=20"`
+	MobileNumber string `json:"mobile_number" validate:"required,mobile,min=11,max=11"`
 }
 
 type TestHandler struct{}
@@ -135,8 +137,21 @@ func (h *TestHandler) UriBinder(c fiber.Ctx) error {
 
 func (h *TestHandler) BodyBinder(c fiber.Ctx) error {
 
+	validate := validations.GetValidator()
+
 	var p personData
-	c.Bind().Body(&p)
+
+	err := c.Bind().Body(&p)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString("Failed to parse JSON")
+	}
+
+	err = validate.Struct(p)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"validationError": err.Error(),
+		})
+	}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"result": "BodyBinder",

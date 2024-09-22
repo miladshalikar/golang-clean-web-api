@@ -11,6 +11,7 @@ type Config struct {
 	Server   ServerConfig
 	Postgres PostgresConfig
 	Redis    RedisConfig
+	Password PasswordConfig
 }
 
 type ServerConfig struct {
@@ -38,6 +39,15 @@ type RedisConfig struct {
 	PoolTimeout        int
 }
 
+type PasswordConfig struct {
+	IncludeChars     bool
+	IncludeDigits    bool
+	MinLength        int
+	MaxLength        int
+	IncludeUppercase bool
+	IncludeLowercase bool
+}
+
 func GetConfig() *Config {
 	cfgPath := getConfigPath(os.Getenv("APP_ENV"))
 	v, err := LoudConfig(cfgPath, "yml")
@@ -51,14 +61,14 @@ func GetConfig() *Config {
 	return cfg
 }
 
-func getConfigPath(env string) string {
-	if env == "docker" {
-		return "config/config-docker"
-	} else if env == "productions" {
-		return "config/config-production"
-	} else {
-		return "src/config/config-development"
+func ParseConfig(v *viper.Viper) (*Config, error) {
+	var cfg Config
+	err := v.Unmarshal(&cfg)
+	if err != nil {
+		log.Printf("unable to Parse config : %v", err)
+		return nil, err
 	}
+	return &cfg, nil
 }
 
 func LoudConfig(filename string, fileType string) (*viper.Viper, error) {
@@ -79,12 +89,12 @@ func LoudConfig(filename string, fileType string) (*viper.Viper, error) {
 	return v, nil
 }
 
-func ParseConfig(v *viper.Viper) (*Config, error) {
-	var cfg Config
-	err := v.Unmarshal(&cfg)
-	if err != nil {
-		log.Printf("unable to Parse config : %v", err)
-		return nil, err
+func getConfigPath(env string) string {
+	if env == "docker" {
+		return "config/config-docker"
+	} else if env == "productions" {
+		return "config/config-production"
+	} else {
+		return "src/config/config-development"
 	}
-	return &cfg, nil
 }
