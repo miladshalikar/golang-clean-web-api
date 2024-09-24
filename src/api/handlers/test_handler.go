@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/gofiber/fiber/v3"
+	"github.com/miladshalikar/golang-clean-web-api/src/api/helper"
 	"github.com/miladshalikar/golang-clean-web-api/src/api/validations"
 	"net/http"
 )
@@ -24,25 +25,20 @@ func NewTestHandler() *TestHandler {
 }
 
 func (h *TestHandler) Test(c fiber.Ctx) error {
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"result": "test",
-	})
+	return c.Status(fiber.StatusOK).JSON(helper.GenerateBaseResponse("Test", true, 0))
 }
 
 func (h *TestHandler) Users(c fiber.Ctx) error {
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"result": "users",
-	})
+	return c.Status(fiber.StatusOK).JSON(helper.GenerateBaseResponse("Users", true, 0))
 }
 
 func (h *TestHandler) UserById(c fiber.Ctx) error {
 
 	id := c.Params("id")
-
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+	return c.Status(fiber.StatusOK).JSON(helper.GenerateBaseResponse(fiber.Map{
 		"result": "UserById",
 		"id":     id,
-	})
+	}, true, 0))
 }
 
 func (h *TestHandler) UserByUsername(c fiber.Ctx) error {
@@ -75,10 +71,10 @@ func (h *TestHandler) HeaderBinder1(c fiber.Ctx) error {
 
 	userId := c.Get("UserId")
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+	return c.Status(fiber.StatusOK).JSON(helper.GenerateBaseResponse(fiber.Map{
 		"result": "HeaderBinder1",
 		"userId": userId,
-	})
+	}, true, 0))
 }
 
 func (h *TestHandler) HeaderBinder2(c fiber.Ctx) error {
@@ -143,20 +139,19 @@ func (h *TestHandler) BodyBinder(c fiber.Ctx) error {
 
 	err := c.Bind().Body(&p)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).SendString("Failed to parse JSON")
+		return c.Status(fiber.StatusBadRequest).JSON(helper.GenerateBaseResponseWithError("Failed to parse JSON",
+			false, -1, err))
 	}
 
 	err = validate.Struct(p)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"validationError": err.Error(),
-		})
+		return c.Status(fiber.StatusBadRequest).JSON(helper.GenerateBaseResponseWithValidationError(nil, false, -1, err))
 	}
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"result": "BodyBinder",
+	return c.Status(fiber.StatusOK).JSON(helper.GenerateBaseResponse(fiber.Map{
+		"result": "bodyBinder",
 		"person": p,
-	})
+	}, true, 0))
 }
 
 func (h *TestHandler) FormBinder(c fiber.Ctx) error {

@@ -12,10 +12,21 @@ import (
 	"log"
 )
 
-func InitServer() {
+func InitServer(cfg *config.Config) {
 
-	cfg := config.GetConfig()
+	r := fiber.New()
 
+	RegisterValidators()
+
+	r.Use(middlewares.Cors(cfg))
+	r.Use(logger.New(), recover.New(), middlewares.RateLimiter())
+
+	RegisterRoutes(r)
+
+	r.Listen(fmt.Sprintf(":%s", cfg.Server.InternalPort))
+}
+
+func RegisterValidators() {
 	validate := validations.GetValidator()
 	err := validate.RegisterValidation("mobile", validations.IranianMobileNumberValidator)
 	if err != nil {
@@ -25,13 +36,9 @@ func InitServer() {
 	if err != nil {
 		log.Fatalf("Error registering custom validator: %v", err)
 	}
+}
 
-	r := fiber.New()
-
-	//r.Use(logger.New())
-	//r.Use(recover.New())
-	r.Use(logger.New(), recover.New(), middlewares.RateLimiter())
-
+func RegisterRoutes(r *fiber.App) {
 	api := r.Group("/api")
 
 	v1 := api.Group("/v1")
@@ -48,6 +55,4 @@ func InitServer() {
 		health := v2.Group("/health")
 		routers.Health(health)
 	}
-
-	r.Listen(fmt.Sprintf(":%s", cfg.Server.Port))
 }

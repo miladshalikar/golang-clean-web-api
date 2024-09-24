@@ -1,7 +1,9 @@
 package middlewares
 
 import (
+	"errors"
 	"github.com/gofiber/fiber/v3"
+	"github.com/miladshalikar/golang-clean-web-api/src/api/helper"
 	"golang.org/x/time/rate"
 	"time"
 )
@@ -38,7 +40,8 @@ func RateLimiter() fiber.Handler {
 	limiter := rate.NewLimiter(rate.Every(time.Second), 1)
 	return func(c fiber.Ctx) error {
 		if !limiter.Allow() {
-			return c.Status(fiber.StatusTooManyRequests).SendString("Too Many Requests")
+			return c.Status(fiber.StatusTooManyRequests).JSON(
+				helper.GenerateBaseResponseWithError(nil, false, -100, errors.New("Too Many Requests")))
 		}
 		return c.Next()
 	}

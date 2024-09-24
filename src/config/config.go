@@ -4,7 +4,7 @@ import (
 	"errors"
 	"github.com/spf13/viper"
 	"log"
-	"os"
+	"time"
 )
 
 type Config struct {
@@ -12,31 +12,48 @@ type Config struct {
 	Postgres PostgresConfig
 	Redis    RedisConfig
 	Password PasswordConfig
+	Cors     CorsConfig
+	Logger   LoggerConfig
+	Otp      OtpConfig
+	JWT      JWTConfig
 }
 
 type ServerConfig struct {
-	Port    string
-	runMode string
+	InternalPort string
+	ExternalPort string
+	RunMode      string
+}
+
+type LoggerConfig struct {
+	FilePath string
+	Encoding string
+	Level    string
+	Logger   string
 }
 
 type PostgresConfig struct {
-	Host     string
-	Port     string
-	User     string
-	Password string
-	DbName   string
-	SSLMode  string
+	Host            string
+	Port            string
+	User            string
+	Password        string
+	DbName          string
+	SSLMode         string
+	MaxIdleConns    int
+	MaxOpenConns    int
+	ConnMaxLifetime time.Duration
 }
 
 type RedisConfig struct {
 	Host               string
 	Port               string
-	User               string
 	Password           string
 	Db                 string
-	MinIdleConnections string
+	DialTimeout        time.Duration
+	ReadTimeout        time.Duration
+	WriteTimeout       time.Duration
+	IdleCheckFrequency time.Duration
 	PoolSize           int
-	PoolTimeout        int
+	PoolTimeout        time.Duration
 }
 
 type PasswordConfig struct {
@@ -48,16 +65,45 @@ type PasswordConfig struct {
 	IncludeLowercase bool
 }
 
+type CorsConfig struct {
+	AllowOrigins string
+}
+
+type OtpConfig struct {
+	ExpireTime time.Duration
+	Digits     int
+	Limiter    time.Duration
+}
+
+type JWTConfig struct {
+	AccessTokenExpireDuration  time.Duration
+	RefreshTokenExpireDuration time.Duration
+	Secret                     string
+	RefreshSecret              string
+}
+
 func GetConfig() *Config {
-	cfgPath := getConfigPath(os.Getenv("APP_ENV"))
-	v, err := LoudConfig(cfgPath, "yml")
+	//cfgPath := getConfigPath(os.Getenv("APP_ENV"))
+	cfgPath := getConfigPath("production")
+	v, err := LoadConfig(cfgPath, "yml")
 	if err != nil {
 		log.Fatalf("Error in load config %v", err)
 	}
+
 	cfg, err := ParseConfig(v)
+
+	//envPort := os.Getenv("PORT")
+	//if envPort != "" {
+	//	cfg.Server.ExternalPort = envPort
+	//	log.Printf("Set external port from environment -> %s", cfg.Server.ExternalPort)
+	//} else {
+	//	cfg.Server.ExternalPort = cfg.Server.InternalPort
+	//	log.Printf("Set external port from environment -> %s", cfg.Server.ExternalPort)
+	//}
 	if err != nil {
-		log.Fatalf("Error in Parse config %v", err)
+		log.Fatalf("Error in parse config %v", err)
 	}
+
 	return cfg
 }
 
@@ -65,13 +111,12 @@ func ParseConfig(v *viper.Viper) (*Config, error) {
 	var cfg Config
 	err := v.Unmarshal(&cfg)
 	if err != nil {
-		log.Printf("unable to Parse config : %v", err)
+		log.Printf("Unable to parse config: %v", err)
 		return nil, err
 	}
 	return &cfg, nil
 }
-
-func LoudConfig(filename string, fileType string) (*viper.Viper, error) {
+func LoadConfig(filename string, fileType string) (*viper.Viper, error) {
 	v := viper.New()
 	v.SetConfigType(fileType)
 	v.SetConfigName(filename)
@@ -80,7 +125,7 @@ func LoudConfig(filename string, fileType string) (*viper.Viper, error) {
 
 	err := v.ReadInConfig()
 	if err != nil {
-		log.Printf("unable to read config : %v", err)
+		log.Printf("Unable to read config: %v", err)
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			return nil, errors.New("config file not found")
 		}
@@ -91,10 +136,10 @@ func LoudConfig(filename string, fileType string) (*viper.Viper, error) {
 
 func getConfigPath(env string) string {
 	if env == "docker" {
-		return "config/config-docker"
-	} else if env == "productions" {
-		return "config/config-production"
+		return "/src/config/config-docker"
+	} else if env == "production" {
+		return "/src/config/config-production"
 	} else {
-		return "src/config/config-development"
+		return "/src/config/config-development"
 	}
 }
